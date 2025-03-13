@@ -8,7 +8,8 @@ MAX_STUDENTS = 100
 MAX_TEAMS = 20
 
 class Student:
-    def __init__(self, phone, department, student_id, name, avg, score=None, team=None):
+    def __init__(self, gender, phone, department, student_id, name, avg, score=None, team=None):
+        self.gender = gender  # 성별
         self.phone = phone  # 전화번호
         self.department = department  # 학과
         self.student_id = student_id  # 학번
@@ -18,7 +19,7 @@ class Student:
         self.team = team  # 팀 번호
 
 def compare_score(student):
-    return student.score
+    return student  .score
 
 def compare_team(student):
     return student.team
@@ -63,12 +64,12 @@ def process_teams():
             reader = csv.reader(file)
             next(reader)  # 첫 번째 행은 건너뜁니다 (헤더)
             for row in reader:
-                if len(row) < 5:  # 각 행의 값이 5개보다 적으면 건너뜁니다.
+                if len(row) < 6:  # 각 행의 값이 6개보다 적으면 건너뜁니다.
                     continue  # 필요한 값이 아닌 경우 건너뛰기
-                phone, department, student_id, name, avg = row[:5]  # 첫 5개 항목만 사용
+                gender, phone, department, student_id, name, avg = row[:6]  # 첫 6개 항목만 사용
                 avg = float(avg)  # 평균 점수는 실수로 변환
                 # 실제 점수를 AVG로 설정, 없으면 기본 점수로 사용
-                students.append(Student(phone, department, student_id, name, avg))
+                students.append(Student(gender, phone, department, student_id, name, avg))
                 total_score += avg
 
         n = len(students)
@@ -86,16 +87,41 @@ def process_teams():
         teams = [[] for _ in range(team_count_value)]
         team_scores = [0] * team_count_value
         team_sizes = [0] * team_count_value
+        female_team_count = [0] * team_count_value  # 각 팀의 여성 학생 수를 추적
 
-        # 학생을 평균 점수 순으로 정렬
-        students.sort(key=compare_score, reverse=True)
+        # '핸디' 학생이 들어간 팀을 추적하기 위한 변수
+        handy_assigned_teams = set()
+
+        # 학생을 성별 및 평균 점수 순으로 정렬 (여성 먼저, 그다음 남성)
+        students.sort(key=lambda x: (x.gender == 'M', x.score), reverse=True)
 
         # 팀 배치
         for student in students:
-            min_index = min(range(team_count_value), key=lambda i: (team_sizes[i] == team_size_value, team_scores[i]))
-            team_scores[min_index] += student.score
-            teams[min_index].append(student)
-            team_sizes[min_index] += 1
+            if student.name == '핸디':
+                # '핸디' 학생은 한 팀에 최대 1명만 배치
+                assigned = False
+                for i in range(team_count_value):
+                    if i not in handy_assigned_teams:
+                        teams[i].append(student)
+                        team_scores[i] += student.score
+                        team_sizes[i] += 1
+                        handy_assigned_teams.add(i)  # 이 팀에는 '핸디' 학생이 배치됨
+                        assigned = True
+                        break
+                if not assigned:
+                    raise ValueError("핸디 학생이 배치될 수 없습니다. 팀이 부족합니다.")
+            else:
+                if student.gender == 'W':
+                    # 여성 학생은 최대 2명까지 각 팀에 배치
+                    min_index = min(range(team_count_value), key=lambda i: (team_sizes[i] == team_size_value, team_scores[i], female_team_count[i] >= 2))
+                    female_team_count[min_index] += 1
+                else:
+                    # 남성 학생은 제한 없이 배치
+                    min_index = min(range(team_count_value), key=lambda i: (team_sizes[i] == team_size_value, team_scores[i]))
+
+                team_scores[min_index] += student.score
+                teams[min_index].append(student)
+                team_sizes[min_index] += 1
 
         # 결과 파일명에 날짜와 시간 포함
         current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -119,6 +145,7 @@ def process_teams():
 
     except ValueError as e:
         messagebox.showerror("오류", str(e))  # 오류 메시지
+
 
 # 메인 윈도우 생성
 root = tk.Tk()
@@ -170,3 +197,4 @@ process_button.pack(pady=10)
 
 # GUI 실행
 root.mainloop()
+
