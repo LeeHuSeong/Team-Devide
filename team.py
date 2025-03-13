@@ -39,6 +39,16 @@ def set_team_size():
     except ValueError:
         messagebox.showerror("입력 오류", "숫자를 입력하세요")  # 숫자가 아닌 값 입력 시 오류 메시지
 
+def set_team_count():
+    # 팀 개수를 설정하는 함수
+    try:
+        team_count.set(int(team_count_entry.get()))  # 입력값을 정수로 변환하여 저장
+        print(f"팀 개수: {team_count.get()}")
+        # 확인 버튼을 눌렀을 때 메시지 박스 표시
+        messagebox.showinfo("확인", "팀 개수가 설정되었습니다.")  # 확인 메시지
+    except ValueError:
+        messagebox.showerror("입력 오류", "숫자를 입력하세요")  # 숫자가 아닌 값 입력 시 오류 메시지
+
 def process_teams():
     # 팀 매칭 로직 수행 함수
     try:
@@ -67,18 +77,22 @@ def process_teams():
         
         average_score = total_score / n
 
-        # 팀 크기 입력 확인
-        team_count = (n + team_size.get() - 1) // team_size.get()
-        teams = [[] for _ in range(team_count)]
-        team_scores = [0] * team_count
-        team_sizes = [0] * team_count
+        # 팀 개수 입력 확인
+        team_count_value = team_count.get()
+        if team_count_value <= 0 or team_count_value > n:
+            raise ValueError("팀 개수는 1 이상, 학생 수 이하로 설정해야 합니다.")
+
+        team_size_value = (n + team_count_value - 1) // team_count_value
+        teams = [[] for _ in range(team_count_value)]
+        team_scores = [0] * team_count_value
+        team_sizes = [0] * team_count_value
 
         # 학생을 평균 점수 순으로 정렬
         students.sort(key=compare_score, reverse=True)
 
         # 팀 배치
         for student in students:
-            min_index = min(range(team_count), key=lambda i: (team_sizes[i] == team_size.get(), team_scores[i]))
+            min_index = min(range(team_count_value), key=lambda i: (team_sizes[i] == team_size_value, team_scores[i]))
             team_scores[min_index] += student.score
             teams[min_index].append(student)
             team_sizes[min_index] += 1
@@ -94,7 +108,7 @@ def process_teams():
             writer.writerow(["Average score:", f"{average_score:.2f}"])
             writer.writerow([])
 
-            for i in range(team_count):
+            for i in range(team_count_value):
                 writer.writerow([f"Team {i + 1}:"])
                 for student in teams[i]:
                     writer.writerow([student.phone, student.department, student.student_id, student.name, student.avg, student.score])
@@ -109,13 +123,16 @@ def process_teams():
 # 메인 윈도우 생성
 root = tk.Tk()
 root.title("볼링 팀 매칭 프로그램")
-root.geometry("500x250")
+root.geometry("500x350")
 
 # 파일 경로를 저장할 변수
 file_dir = tk.StringVar()
 
 # 팀 인원수를 저장할 변수
 team_size = tk.IntVar()
+
+# 팀 개수를 저장할 변수
+team_count = tk.IntVar()
 
 # CSV 파일 불러오기 버튼
 load_button = tk.Button(root, text="CSV 파일 불러오기", command=load_csv)
@@ -132,9 +149,20 @@ team_size_label.pack(pady=5)
 team_size_entry = tk.Entry(root)
 team_size_entry.pack(pady=5)
 
-# 확인 버튼
-confirm_button = tk.Button(root, text="확인", command=set_team_size)
+# 확인 버튼 (팀 사이즈 설정)
+confirm_button = tk.Button(root, text="팀 사이즈 확인", command=set_team_size)
 confirm_button.pack(pady=5)
+
+# 팀 개수 입력 필드
+team_count_label = tk.Label(root, text="팀 개수 입력:")
+team_count_label.pack(pady=5)
+
+team_count_entry = tk.Entry(root)
+team_count_entry.pack(pady=5)
+
+# 확인 버튼 (팀 개수 설정)
+confirm_team_count_button = tk.Button(root, text="팀 개수 확인", command=set_team_count)
+confirm_team_count_button.pack(pady=5)
 
 # 결과 처리 버튼
 process_button = tk.Button(root, text="팀 매칭 처리", command=process_teams)
